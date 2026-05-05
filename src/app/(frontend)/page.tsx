@@ -62,7 +62,13 @@ export default async function HomePage() {
               return (
                 <Card key={item.id} className="overflow-hidden">
                   <div className="relative h-56 w-full">
-                    <Image src={imageURL} alt={item.name} fill className="object-cover" />
+                    <Image
+                      src={imageURL}
+                      alt={item.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover"
+                    />
                   </div>
                   <CardHeader>
                     <CardTitle>{item.name}</CardTitle>

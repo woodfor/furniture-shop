@@ -54,7 +54,13 @@ export default async function RoomCategoryPage({ params }: PageProps) {
                 className="overflow-hidden rounded-xl border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="relative h-56 w-full">
-                  <Image src={imageURL} alt={item.name} fill className="object-cover" />
+                  <Image
+                    src={imageURL}
+                    alt={item.name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover"
+                  />
                 </div>
                 <div className="space-y-2 p-4">
                   <p className="text-lg font-medium">{item.name}</p>

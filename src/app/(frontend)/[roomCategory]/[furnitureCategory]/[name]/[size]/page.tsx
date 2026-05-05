@@ -68,7 +68,13 @@ export default async function FurnitureDetailPage({ params }: PageProps) {
       <div className="mx-auto w-full max-w-7xl space-y-10 px-6 py-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div className="relative h-[420px] w-full overflow-hidden rounded-2xl border bg-white">
-            <Image src={imageURL} alt={item.name} fill className="object-cover" />
+            <Image
+              src={imageURL}
+              alt={item.name}
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover"
+            />
           </div>
           <div className="space-y-4 rounded-2xl border bg-white p-6">
             <h1 className="text-3xl font-semibold">{item.name}</h1>
