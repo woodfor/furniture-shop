@@ -135,8 +135,8 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px,1fr]">
-      <aside className="h-[640px] overflow-y-auto rounded-2xl border bg-white p-4">
+    <div className="grid h-[640px] grid-cols-[320px_1fr] gap-6">
+      <aside className="h-full overflow-y-auto rounded-2xl border bg-white p-4">
         <h2 className="mb-4 text-lg font-semibold">Furniture</h2>
         <div className="space-y-3">
           {items.map((item) => {
@@ -165,7 +165,7 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
         </div>
       </aside>
 
-      <section className="space-y-4">
+      <section className="flex h-full flex-col gap-4">
         <div className="flex items-center justify-between gap-4 rounded-2xl border bg-white p-4">
           <div>
             <p className="text-sm text-zinc-500">Current selection</p>
@@ -210,7 +210,7 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
           </div>
         </div>
 
-        <div className="h-[580px] overflow-hidden rounded-2xl border bg-white">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border bg-white">
           <Canvas camera={{ fov: 45, position: [3.5, 2.5, 3.5] }}>
             <color attach="background" args={["#f4f4f5"]} />
             <ambientLight intensity={0.5} />
