@@ -1,11 +1,11 @@
 "use client";
 
-import { OrbitControls, Stage, useGLTF } from "@react-three/drei";
+import { Environment, OrbitControls, useGLTF } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { MOUSE, Plane, Vector3 } from "three";
+import { Box3, MOUSE, Plane, Vector3 } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 
 export type ShowroomItem = {
@@ -32,7 +32,18 @@ type PointerCaptureTarget = EventTarget & {
 
 function RenderModel({ modelUrl }: { modelUrl: string }) {
   const gltf = useGLTF(modelUrl);
-  const scene = useMemo(() => gltf.scene.clone(), [gltf.scene]);
+  const scene = useMemo(() => {
+    const cloned = gltf.scene.clone();
+    const box = new Box3().setFromObject(cloned);
+    const desiredMinY = 0;
+
+    // Only lift model when its base is below the floor level.
+    if (Number.isFinite(box.min.y) && box.min.y < desiredMinY) {
+      cloned.position.y += desiredMinY - box.min.y;
+    }
+
+    return cloned;
+  }, [gltf.scene]);
   return <primitive object={scene} />;
 }
 
@@ -43,7 +54,9 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
   const [dragItemId, setDragItemId] = useState<string | null>(null);
   const [positions, setPositions] = useState<Record<string, [number, number, number]>>({});
   const [rotations, setRotations] = useState<Record<string, number>>({});
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const dragOffsetRef = useRef<[number, number, number]>([0, 0, 0]);
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const dragPlane = useMemo(() => new Plane(new Vector3(0, 1, 0), -DRAG_PLANE_Y), []);
   const dragPoint = useMemo(() => new Vector3(), []);
   const selectedItems = useMemo(
@@ -152,6 +165,35 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
     };
   }, [isDragging]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === canvasContainerRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const enterFullscreen = async () => {
+    if (!canvasContainerRef.current) return;
+    try {
+      await canvasContainerRef.current.requestFullscreen();
+    } catch {
+      // Ignore user-agent rejection and keep normal layout.
+    }
+  };
+
+  const exitFullscreen = async () => {
+    if (!document.fullscreenElement) return;
+    try {
+      await document.exitFullscreen();
+    } catch {
+      // Ignore if browser blocks exit request.
+    }
+  };
+
   if (items.length === 0) {
     return (
       <div className="rounded-2xl border bg-white p-6 text-sm text-zinc-600">
@@ -251,8 +293,20 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border bg-white">
-          <Canvas camera={{ fov: 45, position: [3.5, 2.5, 3.5] }}>
+        <div
+          ref={canvasContainerRef}
+          className={`relative min-h-0 flex-1 overflow-hidden rounded-2xl border bg-white ${
+            isFullscreen ? "rounded-none border-0" : ""
+          }`}
+        >
+          <button
+            type="button"
+            onClick={isFullscreen ? exitFullscreen : enterFullscreen}
+            className="absolute right-4 top-4 z-20 inline-flex rounded-md bg-black/70 px-3 py-2 text-sm text-white hover:bg-black/80"
+          >
+            {isFullscreen ? "Close fullscreen" : "Fullscreen"}
+          </button>
+          <Canvas key={isFullscreen ? "showroom-fullscreen" : "showroom-default"} camera={{ fov: 45, position: [3.5, 2.5, 3.5] }}>
             <color attach="background" args={["#f4f4f5"]} />
             <ambientLight intensity={0.5} />
             <directionalLight intensity={1.1} position={[5, 8, 5]} />
@@ -261,27 +315,26 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
               <meshStandardMaterial color="#e4e4e7" />
             </mesh>
             <Suspense fallback={null}>
-              <Stage adjustCamera={false} intensity={0.65} environment="apartment">
-                {selectedItems.map((item) => {
-                  const position = positions[item.id] ?? DEFAULT_POSITION;
-                  const rotationY = rotations[item.id] ?? 0;
+              <Environment preset="apartment" />
+              {selectedItems.map((item) => {
+                const position = positions[item.id] ?? DEFAULT_POSITION;
+                const rotationY = rotations[item.id] ?? 0;
 
-                  return (
-                    <group
-                      key={item.id}
-                      position={position}
-                      rotation={[0, rotationY, 0]}
-                      onPointerDown={(event) => onDragStart(event, item.id)}
-                      onPointerMove={onDragMove}
-                      onPointerUp={onDragEnd}
-                      onPointerCancel={onDragEnd}
-                      onPointerMissed={onDragEnd}
-                    >
-                      <RenderModel modelUrl={item.modelUrl} />
-                    </group>
-                  );
-                })}
-              </Stage>
+                return (
+                  <group
+                    key={item.id}
+                    position={position}
+                    rotation={[0, rotationY, 0]}
+                    onPointerDown={(event) => onDragStart(event, item.id)}
+                    onPointerMove={onDragMove}
+                    onPointerUp={onDragEnd}
+                    onPointerCancel={onDragEnd}
+                    onPointerMissed={onDragEnd}
+                  >
+                    <RenderModel modelUrl={item.modelUrl} />
+                  </group>
+                );
+              })}
             </Suspense>
             <OrbitControls
               makeDefault

@@ -44,12 +44,24 @@ Deliver an MVP for AI-generated 3D furniture assets and an interactive showroom 
   - rotate left/right controls (15° step)
   - per-item rotation memory
   - reset position action
+  - multi-select in sidebar with simultaneous multi-furniture rendering in showroom
+  - active-item model for controls while keeping all selected items visible
   - camera controls remapped to avoid conflict with left-drag moving
-  - auto camera reframe disabled during object movement
+  - camera rotate moved to mouse middle button; left-click reserved for furniture drag
+  - fullscreen toggle moved to canvas overlay with in-canvas close action
+  - fullscreen exit resize regression fixed (canvas remount + fullscreen class cleanup)
+- Showroom rendering and positioning fixes:
+  - removed `Stage` auto-centering behavior in favor of `Environment` + explicit groups
+  - floor/model overlap mitigation added for models with inconsistent origin/base
 - Showroom layout adjustments completed:
   - left fixed sidebar for furniture options
   - right panel for controls + canvas
   - sidebar and canvas panel heights aligned
+  - sidebar forced to stay left (no fallback stacking above canvas)
+- Pipeline and trigger reliability fixes:
+  - queue trigger made fire-and-forget from `furniture` `afterChange` to avoid save blocking
+  - update trigger deduplicated so image updates do not double-trigger `afterChange`
+  - relationship ID normalization added for Postgres numeric IDs (`model3dFile`, hook log relations)
 
 ## Validation Status
 
