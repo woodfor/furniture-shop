@@ -37,56 +37,82 @@ function RenderModel({ modelUrl }: { modelUrl: string }) {
 }
 
 export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
-  const [selectedId, setSelectedId] = useState(items[0]?.id ?? "");
+  const [selectedIds, setSelectedIds] = useState<string[]>(items[0] ? [items[0].id] : []);
+  const [activeId, setActiveId] = useState(items[0]?.id ?? "");
   const [isDragging, setIsDragging] = useState(false);
+  const [dragItemId, setDragItemId] = useState<string | null>(null);
   const [positions, setPositions] = useState<Record<string, [number, number, number]>>({});
   const [rotations, setRotations] = useState<Record<string, number>>({});
   const dragOffsetRef = useRef<[number, number, number]>([0, 0, 0]);
   const dragPlane = useMemo(() => new Plane(new Vector3(0, 1, 0), -DRAG_PLANE_Y), []);
   const dragPoint = useMemo(() => new Vector3(), []);
-  const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
-  const selectedPosition: [number, number, number] = selectedItem
-    ? (positions[selectedItem.id] ?? DEFAULT_POSITION)
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedIds.includes(item.id)),
+    [items, selectedIds],
+  );
+  const activeItem =
+    items.find((item) => item.id === activeId && selectedIds.includes(item.id)) ?? selectedItems[0];
+  const selectedPosition: [number, number, number] = activeItem
+    ? (positions[activeItem.id] ?? DEFAULT_POSITION)
     : DEFAULT_POSITION;
-  const selectedRotation = selectedItem ? (rotations[selectedItem.id] ?? 0) : 0;
+  const selectedRotation = activeItem ? (rotations[activeItem.id] ?? 0) : 0;
 
-  const updateSelectedPosition = (position: [number, number, number]) => {
-    if (!selectedItem) return;
+  useEffect(() => {
+    if (selectedIds.length === 0) {
+      setActiveId("");
+      return;
+    }
+
+    if (!selectedIds.includes(activeId)) {
+      setActiveId(selectedIds[0]);
+    }
+  }, [activeId, selectedIds]);
+
+  const updatePositionForItem = (itemId: string, position: [number, number, number]) => {
     setPositions((prev) => ({
       ...prev,
-      [selectedItem.id]: position,
+      [itemId]: position,
     }));
+  };
+
+  const updateSelectedPosition = (position: [number, number, number]) => {
+    if (!activeItem) return;
+    updatePositionForItem(activeItem.id, position);
   };
 
   const updateSelectedRotation = (rotationY: number) => {
-    if (!selectedItem) return;
+    if (!activeItem) return;
     setRotations((prev) => ({
       ...prev,
-      [selectedItem.id]: rotationY,
+      [activeItem.id]: rotationY,
     }));
   };
 
-  const moveFromPointerRay = (event: ThreeEvent<PointerEvent>) => {
+  const moveFromPointerRay = (event: ThreeEvent<PointerEvent>, itemId: string) => {
     const hit = event.ray.intersectPlane(dragPlane, dragPoint);
     if (!hit) return;
 
     const nextX = Math.min(DRAG_LIMIT, Math.max(-DRAG_LIMIT, hit.x + dragOffsetRef.current[0]));
     const nextZ = Math.min(DRAG_LIMIT, Math.max(-DRAG_LIMIT, hit.z + dragOffsetRef.current[2]));
-    updateSelectedPosition([nextX, 0, nextZ]);
+    updatePositionForItem(itemId, [nextX, 0, nextZ]);
   };
 
   const finishDrag = () => {
     setIsDragging(false);
+    setDragItemId(null);
   };
 
-  const onDragStart = (event: ThreeEvent<PointerEvent>) => {
-    if (!selectedItem) return;
+  const onDragStart = (event: ThreeEvent<PointerEvent>, itemId: string) => {
     event.stopPropagation();
     setIsDragging(true);
+    setDragItemId(itemId);
+    setActiveId(itemId);
+
+    const currentPosition = positions[itemId] ?? DEFAULT_POSITION;
 
     const hit = event.ray.intersectPlane(dragPlane, dragPoint);
     if (hit) {
-      dragOffsetRef.current = [selectedPosition[0] - hit.x, 0, selectedPosition[2] - hit.z];
+      dragOffsetRef.current = [currentPosition[0] - hit.x, 0, currentPosition[2] - hit.z];
     }
 
     const target = event.target as PointerCaptureTarget | null;
@@ -96,9 +122,9 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
   };
 
   const onDragMove = (event: ThreeEvent<PointerEvent>) => {
-    if (!isDragging) return;
+    if (!isDragging || !dragItemId) return;
     event.stopPropagation();
-    moveFromPointerRay(event);
+    moveFromPointerRay(event, dragItemId);
   };
 
   const onDragEnd = (event: ThreeEvent<PointerEvent>) => {
@@ -126,7 +152,7 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
     };
   }, [isDragging]);
 
-  if (!selectedItem) {
+  if (items.length === 0) {
     return (
       <div className="rounded-2xl border bg-white p-6 text-sm text-zinc-600">
         No generated 3D furniture is available yet.
@@ -140,18 +166,29 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
         <h2 className="mb-4 text-lg font-semibold">Furniture</h2>
         <div className="space-y-3">
           {items.map((item) => {
-            const selected = item.id === selectedItem.id;
+            const selected = selectedIds.includes(item.id);
+            const active = activeItem?.id === item.id;
 
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setSelectedId(item.id)}
+                onClick={() => {
+                  if (selected) {
+                    setSelectedIds((prev) => prev.filter((id) => id !== item.id));
+                  } else {
+                    setSelectedIds((prev) => [...prev, item.id]);
+                    setActiveId(item.id);
+                  }
+                }}
                 className={`w-full rounded-xl border p-3 text-left transition ${
                   selected ? "border-zinc-900 bg-zinc-100" : "border-zinc-200 bg-white hover:bg-zinc-50"
                 }`}
               >
-                <p className="mb-2 font-medium">{item.name}</p>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="font-medium">{item.name}</p>
+                  {active ? <span className="text-xs text-zinc-500">Active</span> : null}
+                </div>
                 <div className="relative h-24 w-full overflow-hidden rounded-lg border bg-zinc-100">
                   {item.imageUrl ? (
                     <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="280px" />
@@ -169,7 +206,8 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
         <div className="flex items-center justify-between gap-4 rounded-2xl border bg-white p-4">
           <div>
             <p className="text-sm text-zinc-500">Current selection</p>
-            <p className="text-lg font-semibold">{selectedItem.name}</p>
+            <p className="text-lg font-semibold">{activeItem?.name ?? "No active furniture selected"}</p>
+            <p className="mt-1 text-xs text-zinc-500">Displayed items: {selectedItems.length}</p>
             <p className="mt-1 text-xs text-zinc-500">
               Position X/Z: {selectedPosition[0].toFixed(2)} / {selectedPosition[2].toFixed(2)}
             </p>
@@ -181,6 +219,7 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
             <button
               type="button"
               onClick={() => updateSelectedPosition(DEFAULT_POSITION)}
+              disabled={!activeItem}
               className="inline-flex rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
             >
               Reset position
@@ -188,6 +227,7 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
             <button
               type="button"
               onClick={() => updateSelectedRotation(selectedRotation - ROTATION_STEP_RAD)}
+              disabled={!activeItem}
               className="inline-flex rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
             >
               Rotate left
@@ -195,13 +235,14 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
             <button
               type="button"
               onClick={() => updateSelectedRotation(selectedRotation + ROTATION_STEP_RAD)}
+              disabled={!activeItem}
               className="inline-flex rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
             >
               Rotate right
             </button>
-            {selectedItem.inquireHref ? (
+            {activeItem?.inquireHref ? (
               <Link
-                href={selectedItem.inquireHref}
+                href={activeItem.inquireHref}
                 className="inline-flex rounded-md bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700"
               >
                 Inquire
@@ -221,17 +262,25 @@ export function ShowroomCanvas({ items }: ShowroomCanvasProps) {
             </mesh>
             <Suspense fallback={null}>
               <Stage adjustCamera={false} intensity={0.65} environment="apartment">
-                <group
-                  position={selectedPosition}
-                  rotation={[0, selectedRotation, 0]}
-                  onPointerDown={onDragStart}
-                  onPointerMove={onDragMove}
-                  onPointerUp={onDragEnd}
-                  onPointerCancel={onDragEnd}
-                  onPointerMissed={onDragEnd}
-                >
-                  <RenderModel modelUrl={selectedItem.modelUrl} />
-                </group>
+                {selectedItems.map((item) => {
+                  const position = positions[item.id] ?? DEFAULT_POSITION;
+                  const rotationY = rotations[item.id] ?? 0;
+
+                  return (
+                    <group
+                      key={item.id}
+                      position={position}
+                      rotation={[0, rotationY, 0]}
+                      onPointerDown={(event) => onDragStart(event, item.id)}
+                      onPointerMove={onDragMove}
+                      onPointerUp={onDragEnd}
+                      onPointerCancel={onDragEnd}
+                      onPointerMissed={onDragEnd}
+                    >
+                      <RenderModel modelUrl={item.modelUrl} />
+                    </group>
+                  );
+                })}
               </Stage>
             </Suspense>
             <OrbitControls
