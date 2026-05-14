@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ModelViewer } from "@/components/3d/ModelViewer";
 import { SiteHeader } from "@/components/site-header";
 import { getPayloadClient } from "@/lib/payload";
 
@@ -61,6 +62,12 @@ export default async function FurnitureDetailPage({ params }: PageProps) {
     firstImage && typeof firstImage === "object" && "url" in firstImage
       ? String(firstImage.url)
       : "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80";
+  const model3dUrl =
+    item.model3dFile && typeof item.model3dFile === "object" && "url" in item.model3dFile
+      ? String(item.model3dFile.url)
+      : null;
+  const model3dStatus = typeof item.model3dStatus === "string" ? item.model3dStatus : "idle";
+  const model3dError = typeof item.model3dError === "string" ? item.model3dError : null;
 
   return (
     <>
@@ -98,6 +105,23 @@ export default async function FurnitureDetailPage({ params }: PageProps) {
             </Link>
           </div>
         </div>
+
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold">3D Preview</h2>
+          {model3dStatus === "ready" && model3dUrl ? (
+            <ModelViewer modelUrl={model3dUrl} />
+          ) : (
+            <div className="rounded-2xl border bg-white p-6 text-sm text-zinc-700">
+              {model3dStatus === "queued" || model3dStatus === "generating" ? (
+                <p>3D model is currently generating. Please check back soon.</p>
+              ) : null}
+              {model3dStatus === "failed" ? (
+                <p>3D model generation failed{model3dError ? `: ${model3dError}` : "."}</p>
+              ) : null}
+              {model3dStatus === "idle" ? <p>3D model has not been generated for this item yet.</p> : null}
+            </div>
+          )}
+        </section>
 
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold">Similar type</h2>

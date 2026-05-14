@@ -7,7 +7,7 @@ export const Media: CollectionConfig = {
   },
   upload: {
     staticDir: "media",
-    mimeTypes: ["image/*", "video/*"],
+    mimeTypes: ["image/*", "video/*", "model/gltf-binary", ".glb"],
   },
   fields: [
     {

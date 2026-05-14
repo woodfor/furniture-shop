@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 
 import { Furniture } from "@/collections/Furniture";
 import { Media } from "@/collections/Media";
+import { Model3DHookLogs } from "@/collections/Model3DHookLogs";
 import { Users } from "@/collections/Users";
 import { SiteSettings } from "@/globals/SiteSettings";
 
@@ -19,6 +20,7 @@ const r2Endpoint = process.env.R2_ENDPOINT;
 const r2Bucket = process.env.R2_BUCKET;
 const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID;
 const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+const r2MediaPrefix = process.env.R2_MEDIA_PREFIX?.trim() || "media";
 
 const r2Configured = Boolean(r2Endpoint && r2Bucket && r2AccessKeyId && r2SecretAccessKey);
 
@@ -30,7 +32,7 @@ export default buildConfig({
       importMapFile: path.resolve(dirname, "src/app/(payload)/importMap.js"),
     },
   },
-  collections: [Users, Media, Furniture],
+  collections: [Users, Media, Furniture, Model3DHookLogs],
   globals: [SiteSettings],
   editor: lexicalEditor(),
   db: postgresAdapter({
@@ -52,7 +54,9 @@ export default buildConfig({
       enabled: r2Configured,
       bucket: r2Bucket ?? "",
       collections: {
-        media: true,
+        media: {
+          prefix: r2MediaPrefix,
+        },
       },
       config: {
         endpoint: r2Endpoint,
@@ -62,6 +66,7 @@ export default buildConfig({
           secretAccessKey: r2SecretAccessKey ?? "",
         },
       },
+      useCompositePrefixes: true,
     }),
   ],
   secret: process.env.PAYLOAD_SECRET ?? "furniture-shop-dev-secret",
