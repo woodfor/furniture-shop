@@ -335,8 +335,10 @@ async function executeGenerationJob({ furnitureId, force, hookLogId, source }: Q
       );
     }
 
-    const meshyImageInput = await toMeshyImageInput(imageUrls[0]);
-    const taskId = await createImageTo3DTask([meshyImageInput]);
+    const meshyImageInputs = await Promise.all(
+      imageUrls.map((imageUrl) => toMeshyImageInput(imageUrl)),
+    );
+    const taskId = await createImageTo3DTask(meshyImageInputs);
     await safeUpdateHookLog(hookLogId, {
       meshyTaskId: taskId,
     });

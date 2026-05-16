@@ -10,6 +10,7 @@ export const DEFAULT_NAV_ITEMS = [
   { label: "Bedroom", href: "/category/bedroom" },
   { label: "Dinning Room", href: "/category/dinning-room" },
   { label: "Outdoor", href: "/category/outdoor" },
+  { label: "Showroom", href: "/visualizer" },
   { label: "Contact Us", href: "/contact-us" },
 ] as const;
 

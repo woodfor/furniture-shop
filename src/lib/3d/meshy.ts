@@ -24,6 +24,7 @@ type PollTaskResponse = {
 };
 
 const DEFAULT_MESHY_BASE_URL = "https://api.meshy.ai/openapi/v1";
+const DEFAULT_MESHY_IMAGE_TO_3D_PATH = "/multi-image-to-3d";
 const DEFAULT_MESHY_POLL_INTERVAL_MS = 6000;
 const DEFAULT_MESHY_MAX_POLL_ATTEMPTS = 50;
 
@@ -37,7 +38,7 @@ function getMeshyBaseUrl() {
 }
 
 function getImageTo3dPath() {
-  return process.env.MESHY_IMAGE_TO_3D_PATH?.trim() || "/image-to-3d";
+  return DEFAULT_MESHY_IMAGE_TO_3D_PATH;
 }
 
 function asString(value: unknown): string | null {
@@ -102,7 +103,7 @@ export async function createImageTo3DTask(imageUrls: string[]): Promise<string> 
   const response = await requestMeshy<StartTaskResponse>(getImageTo3dPath(), {
     method: "POST",
     body: JSON.stringify({
-      image_url: imageUrls[0],
+      image_urls: imageUrls.slice(0, 4),
       target_formats: ["glb"],
       should_texture: true,
     }),
