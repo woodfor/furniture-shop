@@ -56,6 +56,12 @@ export default buildConfig({
       collections: {
         media: {
           prefix: r2MediaPrefix,
+          signedDownloads: {
+            // Serve large 3D assets via presigned object-storage URLs instead of proxy streaming.
+            shouldUseSignedURL: ({ filename }) =>
+              /\.(glb|gltf|fbx|obj|usdz|stl|3mf)$/i.test(filename),
+            expiresIn: 60 * 60,
+          },
         },
       },
       config: {
